@@ -38,9 +38,10 @@
     .link-btn{display:inline-block;text-decoration:none;text-align:center;margin-top:10px;background:var(--accent);color:#fff;border:none}
     .link-btn.secondary{background:#e9e2d9;color:var(--text);border:1px solid var(--line)}
     .section-label{font-size:.9rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px}
-    .bundle-box,.capture-box,.passcode-box{background:#fbf8f4;border:1px dashed var(--line);border-radius:14px;padding:14px;margin-top:14px}
+    .bundle-box,.capture-box,.passcode-box,.prompt-box{background:#fbf8f4;border:1px dashed var(--line);border-radius:14px;padding:14px;margin-top:14px}
     .capture-box{background:var(--soft-2)}
     .passcode-box{border-style:solid;background:#fffdf9}
+    .prompt-box{background:#f7f1ea}
     .field-group{margin-top:12px}
     .field-label{display:block;font-size:.92rem;color:var(--text);margin-bottom:6px}
     .checkbox-row{display:flex;gap:10px;align-items:flex-start;margin-top:10px}
@@ -77,7 +78,7 @@
   <div class="wrap">
     <div class="card">
       <h1>Find your Eloah match</h1>
-      <p class="small">Answer 2 quick questions and I’ll point you to the best fit for this season.</p>
+      <p class="small">Answer a couple quick questions and I’ll point you to the best fit for this season.</p>
       <p id="season-note" class="season-note"></p>
     </div>
 
@@ -94,22 +95,43 @@
       </div>
     </div>
 
-    <div id="step2a" class="card hidden">
+    <div id="step2me" class="card hidden">
       <div class="section-label">Step 2</div>
       <h2>What does your skin need most right now?</h2>
       <div id="needs-me" class="check-grid"></div>
       <div class="btn-row">
-        <button class="action-btn secondary" onclick="showStep('step1')">Back</button>
+        <button class="action-btn secondary" onclick="backFromMe()">Back</button>
         <button class="action-btn" onclick="goFromNeedsMe()">Next</button>
       </div>
     </div>
 
-    <div id="step2b" class="card hidden">
-      <div class="section-label">Step 3</div>
+    <div id="step2other" class="card hidden">
+      <div class="section-label">Step 2</div>
       <h2>What would their skin need most?</h2>
       <div id="needs-other" class="check-grid"></div>
       <div class="btn-row">
-        <button class="action-btn secondary" onclick="backFromOther()">Back</button>
+        <button class="action-btn secondary" onclick="backFromOtherNeeds()">Back</button>
+        <button class="action-btn" onclick="goFromNeedsOther()">Next</button>
+      </div>
+    </div>
+
+    <div id="self-prompt" class="card hidden">
+      <div class="prompt-box">
+        <h2>Your skin matters too.</h2>
+        <p>What are you needing right now?</p>
+        <div class="btn-row">
+          <button class="action-btn" onclick="continueToMyNeeds()">Yes, add mine too</button>
+          <button class="action-btn secondary" onclick="showResults()">No, just show their results</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="step3both" class="card hidden">
+      <div class="section-label">Step 3</div>
+      <h2>What would their skin need most?</h2>
+      <div id="needs-other-both" class="check-grid"></div>
+      <div class="btn-row">
+        <button class="action-btn secondary" onclick="showStep('step2me')">Back</button>
         <button class="action-btn" onclick="showResults()">See results</button>
       </div>
     </div>
@@ -143,15 +165,15 @@
     const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwJKUks6ZKsIIzfrwWigfc5gSv5DRehlXw9RTEMmNqqU3LZ8iQRcc7fogv_SjpFKEyGBA/exec';
 
     const ALL_PRODUCTS = {
-      repair:{key:'repair',word:'Repair',blend:'Honey + Frankincense + Cinnamon Leaf + Nutmeg',shop:'https://www.eloahcollective.com/product/repair-honey-frankincense-cinnamon-leaf-nutmeg/QIT7JQRCOZTALEUHIY276GS4?cp=true&sa=true&sbp=false&q=false',sizes:{large:'repair_large',small:'repair_small'}},
-      restore:{key:'restore',word:'Restore',blend:'Calendula + Jasmine + Lavender',shop:'https://www.eloahcollective.com/product/restore-calendula-jasmine-lavender/2K6LOVZZT4RT6HYMLARUSFFC?cs=true&cst=custom',sizes:{large:'restore_large',small:'restore_small'}},
-      ground:{key:'ground',word:'Ground',blend:'Sweet Orange + Patchouli + Vanilla',shop:'https://www.eloahcollective.com/product/ground-sweet-orange-patchouli-vanilla/XAQAMETQRY2ATB3YB7BRKXHF?cp=true&sa=true&sbp=false&q=false',sizes:{large:'ground_large',small:'ground_small'}},
-      tone:{key:'tone',word:'Tone',blend:'Jasmine + Lemongrass',shop:'https://www.eloahcollective.com/product/tone-jasmine-lemongrass/PFRUHPRHNYGV6CJYHR7ISXAL?cp=true&sa=true&sbp=false&q=false',sizes:{large:'tone_large',small:'tone_small'}},
-      refine:{key:'refine',word:'Refine',blend:'Saffron + Vanilla + Rose',shop:'https://www.eloahcollective.com/product/refine-saffron-vanilla-rose/DFQ57IQ7TPKJMUFILMKCTVEB?cp=true&sa=true&sbp=false&q=false',sizes:{large:'refine_large',small:'refine_small'}},
-      strengthen:{key:'strengthen',word:'Strengthen',blend:'Sweet Orange + Cedarwood',shop:'https://www.eloahcollective.com/product/strengthen-sweet-orange-cedarwood/DRR7YSABTQE2QU4B2LODJZHL?cp=true&sa=true&sbp=false&q=false',sizes:{large:'strengthen_large',small:'strengthen_small'}},
-      fortify:{key:'fortify',word:'Fortify',blend:'Clove Bud + Sweet Orange + Vanilla Bean',shop:'https://www.eloahcollective.com/product/fortify-clove-bud-sweet-orange-vanilla-bean/BB7V3TX336OO4PHCAXWYPZFM?cp=true&sa=true&sbp=false&q=false',sizes:{large:'fortify_large',small:'fortify_small'}},
-      energize:{key:'energize',word:'Energize',blend:'Peppermint + Vanilla Bean',shop:'https://www.eloahcollective.com/product/energize-peppermint-vanilla-bean/UCGLWFVFWUIJVPANOVYFSHPU?cp=true&sa=true&sbp=false&q=false',sizes:{large:'energize_large',small:'energize_small'}},
-      thrive:{key:'thrive',word:'Thrive',blend:'Frankincense + Rose + Cedarwood',shop:'https://www.eloahcollective.com/product/thrive-frankincense-rose-cedarwood/YHSPFFHPS3TE4UFNFKWVKZNW?cp=true&sa=true&sbp=false&q=false',sizes:{large:'thrive_large',small:'thrive_small'}}
+      repair:{key:'repair',word:'Repair',blend:'Honey + Frankincense + Cinnamon Leaf + Nutmeg',shop:'https://www.eloahcollective.com/product/repair-honey-frankincense-cinnamon-leaf-nutmeg/QIT7JQRCOZTALEUHIY276GS4?cp=true&sa=true&sbp=false&q=false'},
+      restore:{key:'restore',word:'Restore',blend:'Calendula + Jasmine + Lavender',shop:'https://www.eloahcollective.com/product/restore-calendula-jasmine-lavender/2K6LOVZZT4RT6HYMLARUSFFC?cs=true&cst=custom'},
+      ground:{key:'ground',word:'Ground',blend:'Sweet Orange + Patchouli + Vanilla',shop:'https://www.eloahcollective.com/product/ground-sweet-orange-patchouli-vanilla/XAQAMETQRY2ATB3YB7BRKXHF?cp=true&sa=true&sbp=false&q=false'},
+      tone:{key:'tone',word:'Tone',blend:'Jasmine + Lemongrass',shop:'https://www.eloahcollective.com/product/tone-jasmine-lemongrass/PFRUHPRHNYGV6CJYHR7ISXAL?cp=true&sa=true&sbp=false&q=false'},
+      refine:{key:'refine',word:'Refine',blend:'Saffron + Vanilla + Rose',shop:'https://www.eloahcollective.com/product/refine-saffron-vanilla-rose/DFQ57IQ7TPKJMUFILMKCTVEB?cp=true&sa=true&sbp=false&q=false'},
+      strengthen:{key:'strengthen',word:'Strengthen',blend:'Sweet Orange + Cedarwood',shop:'https://www.eloahcollective.com/product/strengthen-sweet-orange-cedarwood/DRR7YSABTQE2QU4B2LODJZHL?cp=true&sa=true&sbp=false&q=false'},
+      fortify:{key:'fortify',word:'Fortify',blend:'Clove Bud + Sweet Orange + Vanilla Bean',shop:'https://www.eloahcollective.com/product/fortify-clove-bud-sweet-orange-vanilla-bean/BB7V3TX336OO4PHCAXWYPZFM?cp=true&sa=true&sbp=false&q=false'},
+      energize:{key:'energize',word:'Energize',blend:'Peppermint + Vanilla Bean',shop:'https://www.eloahcollective.com/product/energize-peppermint-vanilla-bean/UCGLWFVFWUIJVPANOVYFSHPU?cp=true&sa=true&sbp=false&q=false'},
+      thrive:{key:'thrive',word:'Thrive',blend:'Frankincense + Rose + Cedarwood',shop:'https://www.eloahcollective.com/product/thrive-frankincense-rose-cedarwood/YHSPFFHPS3TE4UFNFKWVKZNW?cp=true&sa=true&sbp=false&q=false'}
     };
 
     const ACTIVE_PRODUCT_KEYS = SEASON_MODE === 'spring_summer'
@@ -202,27 +224,17 @@
 
     const WEIGHTS = WEIGHTS_BY_SEASON[SEASON_MODE];
 
-    let inventory = {
-      repair_large:12, repair_small:8,
-      restore_large:6, restore_small:6,
-      ground_large:9, ground_small:12,
-      tone_large:7, tone_small:5,
-      refine_large:10, refine_small:12,
-      strengthen_large:5, strengthen_small:6,
-      fortify_large:8, fortify_small:6,
-      energize_large:8, energize_small:6,
-      thrive_large:8, thrive_small:6
-    };
-
     let shopFor = null;
     let needsMe = [];
     let needsOther = [];
-    let latestSummary = '';
     let latestProducts = [];
     let lastConsentRecord = null;
 
     function showStep(id) {
-      ['step1','step2a','step2b','results'].forEach(step => document.getElementById(step).classList.add('hidden'));
+      ['step1','step2me','step2other','self-prompt','step3both','results'].forEach(step => {
+        const el = document.getElementById(step);
+        if (el) el.classList.add('hidden');
+      });
       document.getElementById(id).classList.remove('hidden');
     }
 
@@ -254,24 +266,79 @@
 
     renderNeeds('needs-me', 'me');
     renderNeeds('needs-other', 'other');
+    renderNeeds('needs-other-both', 'other');
+
+    function clearSelectionsForType(type) {
+      if (type === 'me') {
+        needsMe = [];
+        document.querySelectorAll('#needs-me .check-item').forEach(btn => btn.classList.remove('selected'));
+      } else {
+        needsOther = [];
+        document.querySelectorAll('#needs-other .check-item, #needs-other-both .check-item').forEach(btn => btn.classList.remove('selected'));
+      }
+    }
+
+    function syncOtherSelections() {
+      const selected = new Set(needsOther);
+      document.querySelectorAll('#needs-other .check-item').forEach(btn => {
+        const text = btn.textContent;
+        const match = NEEDS.find(n => n.label === text);
+        if (match && selected.has(match.key)) btn.classList.add('selected');
+        else btn.classList.remove('selected');
+      });
+      document.querySelectorAll('#needs-other-both .check-item').forEach(btn => {
+        const text = btn.textContent;
+        const match = NEEDS.find(n => n.label === text);
+        if (match && selected.has(match.key)) btn.classList.add('selected');
+        else btn.classList.remove('selected');
+      });
+    }
 
     function goToNeeds() {
       if (!shopFor) return alert("Please choose who you're shopping for.");
-      showStep('step2a');
+
+      if (shopFor === 'me') {
+        clearSelectionsForType('me');
+        clearSelectionsForType('other');
+        showStep('step2me');
+      } else if (shopFor === 'other') {
+        clearSelectionsForType('me');
+        clearSelectionsForType('other');
+        showStep('step2other');
+      } else {
+        clearSelectionsForType('me');
+        clearSelectionsForType('other');
+        showStep('step2me');
+      }
+    }
+
+    function backFromMe() {
+      showStep('step1');
+    }
+
+    function backFromOtherNeeds() {
+      showStep('step1');
     }
 
     function goFromNeedsMe() {
       if (needsMe.length === 0) return alert('Please choose at least one need.');
-      if (shopFor === 'both' || shopFor === 'other') showStep('step2b');
-      else showResults();
+
+      if (shopFor === 'me') {
+        showResults();
+      } else if (shopFor === 'both') {
+        showStep('step3both');
+        syncOtherSelections();
+      }
     }
 
-    function backFromOther() {
-      if (shopFor === 'both') showStep('step2a');
-      else showStep('step1');
+    function goFromNeedsOther() {
+      if (needsOther.length === 0) return alert('Please choose at least one need.');
+      showStep('self-prompt');
     }
 
-    async function fetchInventory() { return inventory; }
+    function continueToMyNeeds() {
+      showStep('step2me');
+    }
 
     function scoreNeeds(selectedNeeds) {
       const scores = {};
@@ -285,38 +352,38 @@
       return scores;
     }
 
-    function productHasStock(productKey) {
-      const p = PRODUCTS[productKey];
-      return (inventory[p.sizes.large] || 0) > 0 || (inventory[p.sizes.small] || 0) > 0;
-    }
-
-    function bestSize(productKey) {
-      const p = PRODUCTS[productKey];
-      const largeQty = inventory[p.sizes.large] || 0;
-      const smallQty = inventory[p.sizes.small] || 0;
-      if (largeQty > 0) return {label:'2 oz',qty:largeQty};
-      if (smallQty > 0) return {label:'1 oz',qty:smallQty};
-      return null;
-    }
-
-    function rankedInStockProducts(scores) {
+    function rankedProducts(scores) {
       return Object.keys(PRODUCTS)
         .map(key => ({key, score: scores[key] || 0}))
-        .filter(x => x.score > 0 && productHasStock(x.key))
+        .filter(x => x.score > 0)
         .sort((a,b) => b.score - a.score);
     }
 
-    function buildSummary(selectedNeeds) {
+    function buildSummary(selectedNeeds, audience) {
+      const intro = audience === 'them'
+        ? 'It sounds like they may need'
+        : 'It sounds like you may need';
+
       const set = new Set(selectedNeeds);
       if (set.has('cracked') || set.has('dry')) {
-        if (set.has('sensitive')) return 'Your skin sounds like it needs deeper moisture with a calmer, gentler feel right now.';
-        return 'Your skin sounds like it needs deeper moisture and extra support right now.';
+        if (set.has('sensitive')) return `${intro} deeper moisture with a calmer, gentler feel right now.`;
+        return `${intro} deeper moisture and extra support right now.`;
       }
-      if (set.has('sensitive')) return 'You seem to be looking for something calm, gentle, and easy to use.';
-      if (set.has('light')) return 'You likely want moisture with a lighter, fresher feel for this season.';
-      if (set.has('firming') && set.has('dull')) return 'You seem to want skin that looks brighter, smoother, and a little more awake.';
-      if (set.has('dull')) return 'You look like a good fit for something more glow-focused and refreshing.';
-      return 'These picks are based on the support your skin seems to want most right now.';
+      if (set.has('sensitive')) return audience === 'them'
+        ? 'It sounds like they may be looking for something calm, gentle, and easy to use.'
+        : 'It sounds like you may be looking for something calm, gentle, and easy to use.';
+      if (set.has('light')) return audience === 'them'
+        ? 'It sounds like they may want moisture with a lighter, fresher feel for this season.'
+        : 'It sounds like you may want moisture with a lighter, fresher feel for this season.';
+      if (set.has('firming') && set.has('dull')) return audience === 'them'
+        ? 'It sounds like they may want skin that looks brighter, smoother, and a little more awake.'
+        : 'It sounds like you may want skin that looks brighter, smoother, and a little more awake.';
+      if (set.has('dull')) return audience === 'them'
+        ? 'It sounds like they may be a good fit for something more glow-focused and refreshing.'
+        : 'It sounds like you may be a good fit for something more glow-focused and refreshing.';
+      return audience === 'them'
+        ? 'These picks are based on the support their skin seems to want most right now.'
+        : 'These picks are based on the support your skin seems to want most right now.';
     }
 
     function getPersonalizedReason(productKey, selectedNeeds) {
@@ -336,285 +403,4 @@
           if (has('dry')) return 'A great everyday option for skin that needs moisture but not your heaviest blend. It helps keep skin soft, balanced, and comfortable.';
           return 'A warm, balanced everyday moisture blend that works well when you want skin support without going too intense.';
         case 'tone':
-          return 'A great fit if you want something lighter and fresher, especially in warmer weather. It still gives moisture without feeling too rich.';
-        case 'refine':
-          if (has('dull') && has('firming')) return 'A strong fit if you want skin to look brighter, smoother, and more refreshed. This one leans more glow-focused and luxurious.';
-          if (has('dull')) return 'Best if your skin feels dull or just needs a little glow. This one is all about a smoother, more radiant look.';
-          return 'A more glow-focused blend for skin that wants a polished, radiant feel.';
-        case 'strengthen':
-          if (has('firming') && has('dull')) return 'A really good match if you want both firming and brightening. This one helps skin look more awake, supported, and refreshed.';
-          if (has('firming')) return 'Best for skin that wants a little more firmness and support. Think refreshed, brighter, and more awake-looking.';
-          return 'A great option when your focus is brighter, firmer-looking skin.';
-        case 'fortify':
-          return 'A strong fit when you want something warm, supportive, and comforting. This one feels rich and protective, especially in colder months.';
-        case 'energize':
-          return 'A great fit if you want something cooling, fresh, and invigorating. This one feels especially good when you want that awake, refreshed feel.';
-        case 'thrive':
-          return 'A beautiful option when you want skin to feel renewed, refreshed, and a little more elevated. This one leans rich and restorative.';
-        default:
-          return 'A strong match based on the needs you selected.';
-      }
-    }
-
-    function renderRecommendationGroup(title, ranked, selectedNeeds) {
-      if (!ranked.length) {
-        return `<div class="result"><h3>${title}</h3><p>I’m currently out of stock on the closest match for those needs, but you can still shop what’s available now.</p></div>`;
-      }
-      const top3 = ranked.slice(0, 3);
-      const summary = buildSummary(selectedNeeds);
-      return `
-        <div class="result">
-          <h3>${title}</h3>
-          <p>${summary}</p>
-          ${top3.map((item, index) => {
-            const p = PRODUCTS[item.key];
-            const size = bestSize(item.key);
-            const reason = getPersonalizedReason(item.key, selectedNeeds);
-            const badge = index === 0 ? 'Best match' : index === 1 ? 'Also a great fit' : 'Good option';
-            return `
-              <div class="result">
-                <h3>${p.word}</h3>
-                <p class="small">${p.blend}</p>
-                <p>${reason}</p>
-                <div>
-                  <span class="tag">${badge}</span>
-                  ${size ? `<span class="tag">Available now</span>` : ''}
-                </div>
-                <a class="link-btn" href="${p.shop}" target="_blank" rel="noopener noreferrer">View ${p.word}</a>
-              </div>`;
-          }).join('')}
-        </div>
-      `;
-    }
-
-    function renderCaptureArea() {
-      const squareButton = SQUARE_SIGNUP_URL
-        ? `<a class="link-btn secondary" href="${SQUARE_SIGNUP_URL}" target="_blank" rel="noopener noreferrer">Open signup page</a>`
-        : '';
-
-      return `
-        <div class="capture-box">
-          <p class="section-label">Save your results</p>
-          <h3>Save your results to get a free gift passcode!</h3>
-          <p>Your Eloah match is ready. Enter your info below to save your results and unlock your free gift passcode.</p>
-
-          <div class="passcode-box">
-            <h3>Your free gift passcode</h3>
-            <div id="masked-passcode" class="passcode">*************</div>
-            <p class="small">Save your results to reveal your passcode.</p>
-          </div>
-
-          <div class="field-group">
-            <label class="field-label" for="full-name">Name</label>
-            <input id="full-name" class="field-input" type="text" placeholder="Your name" />
-          </div>
-
-          <div class="field-group">
-            <label class="field-label" for="email">Email</label>
-            <input id="email" class="field-input" type="email" placeholder="you@example.com" oninput="updateSaveButtonState()" />
-          </div>
-
-          <div class="field-group">
-            <label class="field-label" for="phone">Phone</label>
-            <input id="phone" class="field-input" type="tel" placeholder="(555) 555-5555" oninput="updateSaveButtonState()" />
-          </div>
-
-          <p class="helper-note">Enter an email or phone number to save your results.</p>
-
-          <div class="checkbox-row">
-            <input id="email-optin" type="checkbox" />
-            <label for="email-optin" class="consent-text">Yes, email me Eloah updates, seasonal launches, and special offers.</label>
-          </div>
-
-          <div class="checkbox-row">
-            <input id="sms-optin" type="checkbox" />
-            <label for="sms-optin" class="consent-text">Yes, text me Eloah updates and offers. Consent is not a condition of purchase. Message frequency varies. Message and data rates may apply. Reply STOP to opt out.</label>
-          </div>
-
-          <div class="btn-row">
-            <button id="save-lead-btn" class="action-btn" type="button" onclick="handleSaveLead()" disabled>Save my results + unlock passcode</button>
-            <button id="share-results-btn" class="action-btn secondary" type="button" onclick="handleShareResults()">Share my results</button>
-            ${squareButton}
-          </div>
-
-          <p id="capture-feedback" class="success-note hidden"></p>
-        </div>
-      `;
-    }
-
-    function updateSaveButtonState() {
-      const email = document.getElementById('email')?.value?.trim() || '';
-      const phone = document.getElementById('phone')?.value?.trim() || '';
-      const saveBtn = document.getElementById('save-lead-btn');
-      if (!saveBtn) return;
-      saveBtn.disabled = !(email || phone);
-    }
-
-    function showToast(message) {
-      const toast = document.getElementById('toast');
-      toast.textContent = message;
-      toast.classList.add('show');
-      clearTimeout(window.toastTimeout);
-      window.toastTimeout = setTimeout(() => {
-        toast.classList.remove('show');
-      }, 3200);
-    }
-
-    function revealPasscode() {
-      const masked = document.getElementById('masked-passcode');
-      if (masked) masked.textContent = PASSCODE;
-    }
-
-    function getConsentPayload() {
-      const fullName = document.getElementById('full-name')?.value?.trim() || '';
-      const email = document.getElementById('email')?.value?.trim() || '';
-      const phone = document.getElementById('phone')?.value?.trim() || '';
-      const emailOptIn = document.getElementById('email-optin')?.checked || false;
-      const smsOptIn = document.getElementById('sms-optin')?.checked || false;
-      return {
-        timestamp: new Date().toISOString(),
-        source: 'Eloah Skin Quiz',
-        name: fullName,
-        firstName: fullName,
-        lastName: '',
-        email,
-        phone,
-        emailOptIn: emailOptIn ? 'yes' : 'no',
-        smsOptIn: smsOptIn ? 'yes' : 'no',
-        shopFor,
-        needsMe: needsMe.join(', '),
-        needsOther: needsOther.join(', '),
-        matches: latestProducts.join(', '),
-        passcode: PASSCODE,
-        seasonMode: SEASON_MODE,
-        pageUrl: window.location.href,
-        userAgent: navigator.userAgent
-      };
-    }
-
-    async function saveLeadToGoogleSheet(payload) {
-      if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes('PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE')) {
-        return { ok: false, message: 'Add your Google Apps Script web app URL first.' };
-      }
-      try {
-        const response = await fetch(GOOGLE_SCRIPT_URL, {
-          method: 'POST',
-          mode: 'cors',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-          body: new URLSearchParams(payload).toString()
-        });
-        const text = await response.text();
-        return { ok: response.ok, message: text || 'Saved.' };
-      } catch (error) {
-        return { ok: false, message: error.message || 'Unable to save right now.' };
-      }
-    }
-
-    async function handleSaveLead() {
-      const feedback = document.getElementById('capture-feedback');
-      const saveBtn = document.getElementById('save-lead-btn');
-      const payload = getConsentPayload();
-
-      if (!payload.email && !payload.phone) {
-        feedback.classList.remove('hidden');
-        feedback.textContent = 'Please enter an email or phone number so you can save your results.';
-        return;
-      }
-
-      saveBtn.disabled = true;
-      saveBtn.textContent = 'Saving...';
-
-      const result = await saveLeadToGoogleSheet(payload);
-
-      if (result.ok) {
-        lastConsentRecord = payload;
-        revealPasscode();
-        feedback.classList.remove('hidden');
-        feedback.textContent = 'Saved. Your passcode is now revealed.';
-        showToast('Saved! Here is your free gift passcode.');
-      } else {
-        feedback.classList.remove('hidden');
-        feedback.textContent = result.message || 'Unable to save right now. Please try again.';
-      }
-
-      saveBtn.textContent = 'Save my results + unlock passcode';
-      updateSaveButtonState();
-    }
-
-    async function handleShareResults() {
-      const shareText = latestProducts.length
-        ? `I took the Eloah skin quiz and my matches were: ${latestProducts.join(', ')}. Explore Eloah here: https://www.eloahcollective.com`
-        : `I took the Eloah skin quiz. Explore Eloah here: https://www.eloahcollective.com`;
-
-      if (navigator.share) {
-        try {
-          await navigator.share({
-            title: 'My Eloah matches',
-            text: shareText,
-            url: 'https://www.eloahcollective.com'
-          });
-        } catch (err) {}
-      } else {
-        alert('Sharing is not supported on this device yet. You can copy this link: https://www.eloahcollective.com');
-      }
-    }
-
-    async function showResults() {
-      await fetchInventory();
-      if ((shopFor === 'me' || shopFor === 'both') && needsMe.length === 0) return alert('Please choose at least one need for yourself.');
-      if ((shopFor === 'other' || shopFor === 'both') && needsOther.length === 0) return alert('Please choose at least one need for the other person.');
-
-      const scoresMe = scoreNeeds(needsMe);
-      const scoresOther = scoreNeeds(needsOther);
-      const rankedMe = rankedInStockProducts(scoresMe);
-      const rankedOther = rankedInStockProducts(scoresOther);
-
-      let html = '';
-      let bundleCount = 0;
-      latestProducts = [];
-
-      if (shopFor === 'me') {
-        html += renderRecommendationGroup('Best matches for you', rankedMe, needsMe);
-        bundleCount += Math.min(3, rankedMe.length);
-        latestProducts = rankedMe.slice(0,3).map(x => PRODUCTS[x.key].word);
-      } else if (shopFor === 'other') {
-        html += renderRecommendationGroup('Best matches for them', rankedOther, needsOther);
-        bundleCount += Math.min(3, rankedOther.length);
-        latestProducts = rankedOther.slice(0,3).map(x => PRODUCTS[x.key].word);
-      } else {
-        html += renderRecommendationGroup('For you', rankedMe, needsMe);
-        html += renderRecommendationGroup('For them', rankedOther, needsOther);
-        bundleCount += Math.min(3, rankedMe.length) + Math.min(3, rankedOther.length);
-        latestProducts = [...rankedMe.slice(0,2).map(x => PRODUCTS[x.key].word), ...rankedOther.slice(0,2).map(x => PRODUCTS[x.key].word)];
-      }
-
-      latestSummary = latestProducts.join(', ');
-      document.getElementById('capture-area').innerHTML = renderCaptureArea();
-      document.getElementById('results-content').innerHTML = html;
-
-      const bundle = document.getElementById('bundle-offer');
-      if (bundleCount >= 3) {
-        bundle.innerHTML = `
-          <div class="bundle-box">
-            <h3>Build your routine and save</h3>
-            <p>More than one sounded right? That’s normal. Many people choose one main jar and another for gifting, travel, or seasonal swaps.</p>
-            <p><strong>Buy 3 jars and save $10.</strong></p>
-            <a class="link-btn" href="https://www.eloahcollective.com" target="_blank" rel="noopener noreferrer">Open Eloah shop</a>
-          </div>
-        `;
-      } else {
-        bundle.innerHTML = `
-          <div class="bundle-box">
-            <h3>Shop what’s available now</h3>
-            <p class="small">These recommendations are filtered to products that are currently in stock.</p>
-            <a class="link-btn" href="https://www.eloahcollective.com" target="_blank" rel="noopener noreferrer">Open Eloah shop</a>
-          </div>
-        `;
-      }
-
-      showStep('results');
-      updateSaveButtonState();
-    }
-  </script>
-</body>
-</html>
+          return 'A great fit if you want something lighter and fresher, especially in warmer weather. It still gives moisture wit
