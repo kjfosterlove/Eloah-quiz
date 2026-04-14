@@ -403,4 +403,298 @@
           if (has('dry')) return 'A great everyday option for skin that needs moisture but not your heaviest blend. It helps keep skin soft, balanced, and comfortable.';
           return 'A warm, balanced everyday moisture blend that works well when you want skin support without going too intense.';
         case 'tone':
-          return 'A great fit if you want something lighter and fresher, especially in warmer weather. It still gives moisture wit
+          return 'A great fit if you want something lighter and fresher, especially in warmer weather. It still gives moisture without feeling too rich.';
+        case 'refine':
+          if (has('dull') && has('firming')) return 'A strong fit if you want skin to look brighter, smoother, and more refreshed. This one leans more glow-focused and luxurious.';
+          if (has('dull')) return 'Best if your skin feels dull or just needs a little glow. This one is all about a smoother, more radiant look.';
+          return 'A more glow-focused blend for skin that wants a polished, radiant feel.';
+        case 'strengthen':
+          if (has('firming') && has('dull')) return 'A really good match if you want both firming and brightening. This one helps skin look more awake, supported, and refreshed.';
+          if (has('firming')) return 'Best for skin that wants a little more firmness and support. Think refreshed, brighter, and more awake-looking.';
+          return 'A great option when your focus is brighter, firmer-looking skin.';
+        case 'fortify':
+          return 'A strong fit when you want something warm, supportive, and comforting. This one feels rich and protective, especially in colder months.';
+        case 'energize':
+          return 'A great fit if you want something cooling, fresh, and invigorating. This one feels especially good when you want that awake, refreshed feel.';
+        case 'thrive':
+          return 'A beautiful option when you want skin to feel renewed, refreshed, and a little more elevated. This one leans rich and restorative.';
+        default:
+          return 'A strong match based on the needs you selected.';
+      }
+    }
+
+    function renderRecommendationGroup(title, ranked, selectedNeeds, audience) {
+      if (!ranked.length) {
+        return `<div class="result"><h3>${title}</h3><p>I’m not seeing a strong match from those selections yet, but you can still browse the full collection.</p></div>`;
+      }
+      const top3 = ranked.slice(0, 3);
+      const summary = buildSummary(selectedNeeds, audience);
+      return `
+        <div class="result">
+          <h3>${title}</h3>
+          <p>${summary}</p>
+          ${top3.map((item, index) => {
+            const p = PRODUCTS[item.key];
+            const reason = getPersonalizedReason(item.key, selectedNeeds);
+            const badge = index === 0 ? 'Best match' : index === 1 ? 'Also a great fit' : 'Good option';
+            return `
+              <div class="result">
+                <h3>${p.word}</h3>
+                <p class="small">${p.blend}</p>
+                <p>${reason}</p>
+                <div>
+                  <span class="tag">${badge}</span>
+                </div>
+                <a class="link-btn" href="${p.shop}" target="_blank" rel="noopener noreferrer">View ${p.word}</a>
+              </div>`;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    function renderCaptureArea() {
+      const squareButton = SQUARE_SIGNUP_URL
+        ? `<a class="link-btn secondary" href="${SQUARE_SIGNUP_URL}" target="_blank" rel="noopener noreferrer">Open signup page</a>`
+        : '';
+
+      return `
+        <div class="capture-box">
+          <p class="section-label">Save your results</p>
+          <h3>Save your results to get a free gift passcode!</h3>
+          <p>Your Eloah match is ready. Enter your info below to save your results and unlock your free gift passcode.</p>
+
+          <div class="passcode-box">
+            <h3>Your free gift passcode</h3>
+            <div id="masked-passcode" class="passcode">*************</div>
+            <p class="small">Save your results to reveal your passcode.</p>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="full-name">Name</label>
+            <input id="full-name" class="field-input" type="text" placeholder="Your name" />
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="email">Email</label>
+            <input id="email" class="field-input" type="email" placeholder="you@example.com" oninput="updateSaveButtonState()" />
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="phone">Phone</label>
+            <input id="phone" class="field-input" type="tel" placeholder="(555) 555-5555" oninput="updateSaveButtonState()" />
+          </div>
+
+          <p class="helper-note">Enter an email or phone number to save your results.</p>
+
+          <div class="checkbox-row">
+            <input id="email-optin" type="checkbox" />
+            <label for="email-optin" class="consent-text">Yes, email me Eloah updates, seasonal launches, and special offers.</label>
+          </div>
+
+          <div class="checkbox-row">
+            <input id="sms-optin" type="checkbox" />
+            <label for="sms-optin" class="consent-text">Yes, text me Eloah updates and offers. Consent is not a condition of purchase. Message frequency varies. Message and data rates may apply. Reply STOP to opt out.</label>
+          </div>
+
+          <div class="btn-row">
+            <button id="save-lead-btn" class="action-btn" type="button" onclick="handleSaveLead()" disabled>Save my results + unlock passcode</button>
+            <button id="share-results-btn" class="action-btn secondary" type="button" onclick="handleShareResults()">Share my results</button>
+            ${squareButton}
+          </div>
+
+          <p id="capture-feedback" class="success-note hidden"></p>
+        </div>
+      `;
+    }
+
+    function updateSaveButtonState() {
+      const email = document.getElementById('email')?.value?.trim() || '';
+      const phone = document.getElementById('phone')?.value?.trim() || '';
+      const saveBtn = document.getElementById('save-lead-btn');
+      if (!saveBtn) return;
+      saveBtn.disabled = !(email || phone);
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      clearTimeout(window.toastTimeout);
+      window.toastTimeout = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3200);
+    }
+
+    function revealPasscode() {
+      const masked = document.getElementById('masked-passcode');
+      if (masked) masked.textContent = PASSCODE;
+    }
+
+    function getConsentPayload() {
+      const fullName = document.getElementById('full-name')?.value?.trim() || '';
+      const email = document.getElementById('email')?.value?.trim() || '';
+      const phone = document.getElementById('phone')?.value?.trim() || '';
+      const emailOptIn = document.getElementById('email-optin')?.checked || false;
+      const smsOptIn = document.getElementById('sms-optin')?.checked || false;
+      return {
+        timestamp: new Date().toISOString(),
+        source: 'Eloah Skin Quiz',
+        name: fullName,
+        firstName: fullName,
+        lastName: '',
+        email,
+        phone,
+        emailOptIn: emailOptIn ? 'yes' : 'no',
+        smsOptIn: smsOptIn ? 'yes' : 'no',
+        shopFor,
+        needsMe: needsMe.join(', '),
+        needsOther: needsOther.join(', '),
+        matches: latestProducts.join(', '),
+        passcode: PASSCODE,
+        seasonMode: SEASON_MODE,
+        pageUrl: window.location.href,
+        userAgent: navigator.userAgent
+      };
+    }
+
+    async function saveLeadToGoogleSheet(payload) {
+      if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes('PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE')) {
+        return { ok: false, message: 'Add your Google Apps Script web app URL first.' };
+      }
+      try {
+        const response = await fetch(GOOGLE_SCRIPT_URL, {
+          method: 'POST',
+          mode: 'cors',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+          body: new URLSearchParams(payload).toString()
+        });
+        const text = await response.text();
+        return { ok: response.ok, message: text || 'Saved.' };
+      } catch (error) {
+        return { ok: false, message: error.message || 'Unable to save right now.' };
+      }
+    }
+
+    async function handleSaveLead() {
+      const feedback = document.getElementById('capture-feedback');
+      const saveBtn = document.getElementById('save-lead-btn');
+      const payload = getConsentPayload();
+
+      if (!payload.email && !payload.phone) {
+        feedback.classList.remove('hidden');
+        feedback.textContent = 'Please enter an email or phone number so you can save your results.';
+        return;
+      }
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+
+      const result = await saveLeadToGoogleSheet(payload);
+
+      if (result.ok) {
+        lastConsentRecord = payload;
+        revealPasscode();
+        feedback.classList.remove('hidden');
+        feedback.textContent = 'Saved. Your passcode is now revealed above.';
+        showToast('Saved! Your free gift passcode is now revealed above.');
+      } else {
+        feedback.classList.remove('hidden');
+        feedback.textContent = result.message || 'Unable to save right now. Please try again.';
+      }
+
+      saveBtn.textContent = 'Save my results + unlock passcode';
+      updateSaveButtonState();
+    }
+
+    async function handleShareResults() {
+      const shareText = latestProducts.length
+        ? `I took the Eloah skin quiz and my matches were: ${latestProducts.join(', ')}. Explore Eloah here: https://www.eloahcollective.com`
+        : `I took the Eloah skin quiz. Explore Eloah here: https://www.eloahcollective.com`;
+
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: 'My Eloah matches',
+            text: shareText,
+            url: 'https://www.eloahcollective.com'
+          });
+        } catch (err) {}
+      } else {
+        alert('Sharing is not supported on this device yet. You can copy this link: https://www.eloahcollective.com');
+      }
+    }
+
+    async function showResults() {
+      if ((shopFor === 'me' || shopFor === 'both') && needsMe.length === 0) {
+        return alert('Please choose at least one need for yourself.');
+      }
+      if ((shopFor === 'other' || shopFor === 'both') && needsOther.length === 0) {
+        return alert('Please choose at least one need for the other person.');
+      }
+
+      const scoresMe = scoreNeeds(needsMe);
+      const scoresOther = scoreNeeds(needsOther);
+      const rankedMe = rankedProducts(scoresMe);
+      const rankedOther = rankedProducts(scoresOther);
+
+      let html = '';
+      let bundleCount = 0;
+      latestProducts = [];
+
+      if (shopFor === 'me') {
+        html += renderRecommendationGroup('For you', rankedMe, needsMe, 'you');
+        bundleCount += Math.min(3, rankedMe.length);
+        latestProducts = rankedMe.slice(0,3).map(x => PRODUCTS[x.key].word);
+      } else if (shopFor === 'other') {
+        if (needsMe.length > 0) {
+          html += renderRecommendationGroup('For them', rankedOther, needsOther, 'them');
+          html += renderRecommendationGroup('And for you, if helpful', rankedMe, needsMe, 'you');
+          bundleCount += Math.min(3, rankedOther.length) + Math.min(3, rankedMe.length);
+          latestProducts = [
+            ...rankedOther.slice(0,2).map(x => PRODUCTS[x.key].word),
+            ...rankedMe.slice(0,2).map(x => PRODUCTS[x.key].word)
+          ];
+        } else {
+          html += renderRecommendationGroup('For them', rankedOther, needsOther, 'them');
+          bundleCount += Math.min(3, rankedOther.length);
+          latestProducts = rankedOther.slice(0,3).map(x => PRODUCTS[x.key].word);
+        }
+      } else {
+        html += renderRecommendationGroup('For you', rankedMe, needsMe, 'you');
+        html += renderRecommendationGroup('For them', rankedOther, needsOther, 'them');
+        bundleCount += Math.min(3, rankedMe.length) + Math.min(3, rankedOther.length);
+        latestProducts = [
+          ...rankedMe.slice(0,2).map(x => PRODUCTS[x.key].word),
+          ...rankedOther.slice(0,2).map(x => PRODUCTS[x.key].word)
+        ];
+      }
+
+      document.getElementById('capture-area').innerHTML = renderCaptureArea();
+      document.getElementById('results-content').innerHTML = html;
+
+      const bundle = document.getElementById('bundle-offer');
+      if (bundleCount >= 3) {
+        bundle.innerHTML = `
+          <div class="bundle-box">
+            <h3>Build your routine and save</h3>
+            <p>More than one sounded right? That’s normal. Many people choose one main jar and another for gifting, travel, or seasonal swaps.</p>
+            <p><strong>Buy 3 jars and save $10.</strong></p>
+            <a class="link-btn" href="https://www.eloahcollective.com" target="_blank" rel="noopener noreferrer">Open Eloah shop</a>
+          </div>
+        `;
+      } else {
+        bundle.innerHTML = `
+          <div class="bundle-box">
+            <h3>Explore the collection</h3>
+            <p class="small">These recommendations are based on the needs you selected.</p>
+            <a class="link-btn" href="https://www.eloahcollective.com" target="_blank" rel="noopener noreferrer">Open Eloah shop</a>
+          </div>
+        `;
+      }
+
+      showStep('results');
+      updateSaveButtonState();
+    }
+  </script>
+</body>
+</html>
