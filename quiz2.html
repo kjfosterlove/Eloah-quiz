@@ -32,6 +32,7 @@
     .btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
     .action-btn{width:auto;min-width:120px;text-align:center;background:var(--accent);color:#fff;border:none}
     .action-btn.secondary{background:#e9e2d9;color:var(--text);border:1px solid var(--line)}
+    .action-btn:disabled{opacity:.45;cursor:not-allowed}
     .tag{display:inline-block;padding:5px 9px;border-radius:999px;background:#f2eee8;margin:6px 6px 0 0;font-size:13px}
     .result{border-top:1px solid var(--line);padding-top:14px;margin-top:14px}
     .link-btn{display:inline-block;text-decoration:none;text-align:center;margin-top:10px;background:var(--accent);color:#fff;border:none}
@@ -47,6 +48,29 @@
     .consent-text{font-size:.88rem;color:var(--muted);margin-bottom:0}
     .passcode{display:inline-block;padding:10px 14px;border-radius:12px;background:var(--accent);color:#fff;font-weight:700;letter-spacing:.08em;margin:6px 0 10px 0}
     .success-note{color:var(--success);font-weight:600;margin-top:8px}
+    .helper-note{font-size:.88rem;color:var(--muted);margin-top:10px}
+    .toast{
+      position:fixed;
+      left:50%;
+      bottom:22px;
+      transform:translateX(-50%) translateY(24px);
+      background:var(--accent);
+      color:#fff;
+      padding:12px 16px;
+      border-radius:14px;
+      box-shadow:0 10px 24px rgba(0,0,0,.12);
+      z-index:9999;
+      opacity:0;
+      pointer-events:none;
+      transition:opacity .25s ease, transform .25s ease;
+      max-width:90vw;
+      text-align:center;
+      font-size:.95rem;
+    }
+    .toast.show{
+      opacity:1;
+      transform:translateX(-50%) translateY(0);
+    }
   </style>
 </head>
 <body>
@@ -93,12 +117,14 @@
     <div id="results" class="card hidden">
       <div class="section-label">Results</div>
       <h2>Your best matches</h2>
-      <p class="small">Start with your best match below, then explore the others if you want options.</p>
+      <p class="small">Your Eloah match is ready below.</p>
+      <div id="capture-area"></div>
       <div id="results-content"></div>
       <div id="bundle-offer"></div>
-      <div id="capture-area"></div>
     </div>
   </div>
+
+  <div id="toast" class="toast" aria-live="polite"></div>
 
   <script>
     function getSeasonMode() {
@@ -113,10 +139,9 @@
         : 'Showing fall/winter picks.';
 
     const PASSCODE = 'NEBRASKABLOOM';
-    const SMS_NUMBER = '';
-    const EMAIL_TO = 'lowtox@eloahcollective.com';
     const SQUARE_SIGNUP_URL = '';
     const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwJKUks6ZKsIIzfrwWigfc5gSv5DRehlXw9RTEMmNqqU3LZ8iQRcc7fogv_SjpFKEyGBA/exec';
+
     const ALL_PRODUCTS = {
       repair:{key:'repair',word:'Repair',blend:'Honey + Frankincense + Cinnamon Leaf + Nutmeg',shop:'https://www.eloahcollective.com/product/repair-honey-frankincense-cinnamon-leaf-nutmeg/QIT7JQRCOZTALEUHIY276GS4?cp=true&sa=true&sbp=false&q=false',sizes:{large:'repair_large',small:'repair_small'}},
       restore:{key:'restore',word:'Restore',blend:'Calendula + Jasmine + Lavender',shop:'https://www.eloahcollective.com/product/restore-calendula-jasmine-lavender/2K6LOVZZT4RT6HYMLARUSFFC?cs=true&cst=custom',sizes:{large:'restore_large',small:'restore_small'}},
@@ -356,98 +381,102 @@
                   ${size ? `<span class="tag">Available now</span>` : ''}
                 </div>
                 <a class="link-btn" href="${p.shop}" target="_blank" rel="noopener noreferrer">View ${p.word}</a>
-              </div>            `;
+              </div>`;
           }).join('')}
         </div>
       `;
     }
 
-    function getProductsForMessage() {
-      return latestProducts.join(', ');
-    }
-
     function renderCaptureArea() {
-      const productsText = getProductsForMessage();
-      const mailBody = encodeURIComponent(`My Eloah matches: ${productsText}\nPasscode for complimentary ritual spoon: ${PASSCODE}`);
-      const mailSubject = encodeURIComponent('My Eloah matches');
-      const smsBody = encodeURIComponent(`My Eloah matches: ${productsText}. Passcode: ${PASSCODE}`);
-      const smsHref = SMS_NUMBER ? `sms:${SMS_NUMBER}?&body=${smsBody}` : `sms:?&body=${smsBody}`;
       const squareButton = SQUARE_SIGNUP_URL
         ? `<a class="link-btn secondary" href="${SQUARE_SIGNUP_URL}" target="_blank" rel="noopener noreferrer">Open signup page</a>`
         : '';
 
       return `
         <div class="capture-box">
-          <h3>Send your matches to yourself</h3>
-          <p>Want to come back later? Save your matches and I’ll include a passcode for a complimentary ritual spoon with purchase while supplies last. It’s a small thank-you from Eloah.</p>
+          <p class="section-label">Save your results</p>
+          <h3>Save your results to get a free gift passcode!</h3>
+          <p>Your Eloah match is ready. Enter your info below to save your results and unlock your free gift passcode.</p>
 
-          <div class="field-group">
-            <label class="field-label" for="first-name">First name</label>
-            <input id="first-name" class="field-input" type="text" placeholder="First name" />
+          <div class="passcode-box">
+            <h3>Your free gift passcode</h3>
+            <div id="masked-passcode" class="passcode">*************</div>
+            <p class="small">Save your results to reveal your passcode.</p>
           </div>
 
           <div class="field-group">
-            <label class="field-label" for="last-name">Last name</label>
-            <input id="last-name" class="field-input" type="text" placeholder="Last name (optional)" />
+            <label class="field-label" for="full-name">Name</label>
+            <input id="full-name" class="field-input" type="text" placeholder="Your name" />
           </div>
 
           <div class="field-group">
             <label class="field-label" for="email">Email</label>
-            <input id="email" class="field-input" type="email" placeholder="you@example.com" />
+            <input id="email" class="field-input" type="email" placeholder="you@example.com" oninput="updateSaveButtonState()" />
           </div>
 
           <div class="field-group">
             <label class="field-label" for="phone">Phone</label>
-            <input id="phone" class="field-input" type="tel" placeholder="(555) 555-5555" />
+            <input id="phone" class="field-input" type="tel" placeholder="(555) 555-5555" oninput="updateSaveButtonState()" />
           </div>
+
+          <p class="helper-note">Enter an email or phone number to save your results.</p>
 
           <div class="checkbox-row">
             <input id="email-optin" type="checkbox" />
-            <label for="email-optin" class="consent-text">Email me my results, product tips, and occasional launch or restock updates.</label>
+            <label for="email-optin" class="consent-text">Yes, email me Eloah updates, seasonal launches, and special offers.</label>
           </div>
 
           <div class="checkbox-row">
             <input id="sms-optin" type="checkbox" />
-            <label for="sms-optin" class="consent-text">I agree to receive marketing texts from Eloah. Consent is not a condition of purchase. Message frequency varies. Reply STOP to opt out.</label>
+            <label for="sms-optin" class="consent-text">Yes, text me Eloah updates and offers. Consent is not a condition of purchase. Message frequency varies. Message and data rates may apply. Reply STOP to opt out.</label>
           </div>
 
           <div class="btn-row">
-            <button id="save-lead-btn" class="action-btn" type="button" onclick="handleSaveLead()">Save my matches + unlock passcode</button>
-            <a class="link-btn secondary" href="mailto:${EMAIL_TO}?subject=${mailSubject}&body=${mailBody}">Email my matches</a>
-            <a class="link-btn secondary" href="${smsHref}">Text my matches</a>
+            <button id="save-lead-btn" class="action-btn" type="button" onclick="handleSaveLead()" disabled>Save my results + unlock passcode</button>
+            <button id="share-results-btn" class="action-btn secondary" type="button" onclick="handleShareResults()">Share my results</button>
             ${squareButton}
           </div>
 
-          <p id="capture-feedback" class="success-note hidden">Fill this out to save the contact, consent, quiz responses, and matches to your Google Sheet.</p>
-        </div>
-
-        <div id="passcode-box" class="passcode-box hidden">
-          <h3>Your complimentary gift passcode</h3>
-          <div class="passcode">${PASSCODE}</div>
-          <p class="small">Show this passcode at checkout for a complimentary ritual spoon with purchase while supplies last. A small thank-you from Eloah.</p>
+          <p id="capture-feedback" class="success-note hidden"></p>
         </div>
       `;
     }
 
+    function updateSaveButtonState() {
+      const email = document.getElementById('email')?.value?.trim() || '';
+      const phone = document.getElementById('phone')?.value?.trim() || '';
+      const saveBtn = document.getElementById('save-lead-btn');
+      if (!saveBtn) return;
+      saveBtn.disabled = !(email || phone);
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      clearTimeout(window.toastTimeout);
+      window.toastTimeout = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3200);
+    }
+
     function revealPasscode() {
-      const box = document.getElementById('passcode-box');
-      const feedback = document.getElementById('capture-feedback');
-      if (box) box.classList.remove('hidden');
-      if (feedback) feedback.classList.remove('hidden');
+      const masked = document.getElementById('masked-passcode');
+      if (masked) masked.textContent = PASSCODE;
     }
 
     function getConsentPayload() {
-      const firstName = document.getElementById('first-name')?.value?.trim() || '';
-      const lastName = document.getElementById('last-name')?.value?.trim() || '';
+      const fullName = document.getElementById('full-name')?.value?.trim() || '';
       const email = document.getElementById('email')?.value?.trim() || '';
       const phone = document.getElementById('phone')?.value?.trim() || '';
       const emailOptIn = document.getElementById('email-optin')?.checked || false;
       const smsOptIn = document.getElementById('sms-optin')?.checked || false;
       return {
         timestamp: new Date().toISOString(),
-        source: 'Super Show Quiz',
-        firstName,
-        lastName,
+        source: 'Eloah Skin Quiz',
+        name: fullName,
+        firstName: fullName,
+        lastName: '',
         email,
         phone,
         emailOptIn: emailOptIn ? 'yes' : 'no',
@@ -485,34 +514,49 @@
       const feedback = document.getElementById('capture-feedback');
       const saveBtn = document.getElementById('save-lead-btn');
       const payload = getConsentPayload();
-      if (!payload.firstName) {
-        feedback.classList.remove('hidden');
-        feedback.textContent = 'Please enter at least a first name.';
-        return;
-      }
+
       if (!payload.email && !payload.phone) {
         feedback.classList.remove('hidden');
-        feedback.textContent = 'Please enter an email or phone number so you can keep your matches.';
-        return;
-      }      if (!payload.emailOptIn && !payload.smsOptIn) {
-        feedback.classList.remove('hidden');
-        feedback.textContent = 'Choose email or text if you want follow-up updates.';
+        feedback.textContent = 'Please enter an email or phone number so you can save your results.';
         return;
       }
+
       saveBtn.disabled = true;
       saveBtn.textContent = 'Saving...';
+
       const result = await saveLeadToGoogleSheet(payload);
+
       if (result.ok) {
         lastConsentRecord = payload;
         revealPasscode();
         feedback.classList.remove('hidden');
-        feedback.textContent = 'Saved. Your passcode is unlocked below.';
+        feedback.textContent = 'Saved. Your passcode is now revealed.';
+        showToast('Saved! Your passcode has biw been revealed.');
       } else {
         feedback.classList.remove('hidden');
-        feedback.textContent = result.message;
+        feedback.textContent = result.message || 'Unable to save right now. Please try again.';
       }
-      saveBtn.disabled = false;
-      saveBtn.textContent = 'Save my matches + unlock passcode';
+
+      saveBtn.textContent = 'Save my results + unlock passcode';
+      updateSaveButtonState();
+    }
+
+    async function handleShareResults() {
+      const shareText = latestProducts.length
+        ? `I took the Eloah skin quiz and my matches were: ${latestProducts.join(', ')}. Explore Eloah here: https://www.eloahcollective.com`
+        : `I took the Eloah skin quiz. Explore Eloah here: https://www.eloahcollective.com`;
+
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: 'My Eloah matches',
+            text: shareText,
+            url: 'https://www.eloahcollective.com'
+          });
+        } catch (err) {}
+      } else {
+        alert('Sharing is not supported on this device yet. You can copy this link: https://www.eloahcollective.com');
+      }
     }
 
     async function showResults() {
@@ -545,6 +589,7 @@
       }
 
       latestSummary = latestProducts.join(', ');
+      document.getElementById('capture-area').innerHTML = renderCaptureArea();
       document.getElementById('results-content').innerHTML = html;
 
       const bundle = document.getElementById('bundle-offer');
@@ -567,12 +612,9 @@
         `;
       }
 
-      document.getElementById('capture-area').innerHTML = renderCaptureArea();
       showStep('results');
+      updateSaveButtonState();
     }
   </script>
 </body>
 </html>
-
-
-
