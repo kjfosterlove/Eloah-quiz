@@ -195,20 +195,27 @@
       <div id="needs-other" class="check-grid"></div>
       <div class="btn-row">
         <button class="action-btn secondary" onclick="backFromOther()">Back</button>
-        <button class="action-btn" onclick="showResults()">See results</button>
+        <button class="action-btn" onclick="goToEmailGate()">See results</button>
       </div>
     </div>
 
-    <div id="results" class="card hidden">
-      <div class="section-label">Results</div>
-      <h2>Your recommended routine</h2>
-      <div id="results-content"></div>
-      <div id="bundle-offer"></div>
-      <div class="result">
-        <a class="link-btn" href="./eloah-collective.vcf">Save Eloah for later</a>
-      </div>
-    </div>
+    <div id="emailGate" class="card hidden">
+  <div class="section-label">Almost done</div>
+  <h2>Where should I send your results?</h2>
+  <p class="small">I’ll show your recommendations right away, and you’ll also be added to the Eloah email list for skincare tips, restocks, and seasonal blends.</p>
+
+  <input
+    id="emailInput"
+    type="email"
+    placeholder="Email address"
+    style="width:100%; padding:14px 16px; border-radius:14px; border:1px solid var(--line); font-size:16px; margin-top:10px;"
+  />
+
+  <div class="btn-row">
+    <button class="action-btn secondary" onclick="backFromEmailGate()">Back</button>
+    <button class="action-btn" onclick="submitEmailGate()">See my results</button>
   </div>
+</div>
 
   <script>
     // ---------- season ----------
@@ -362,7 +369,7 @@
 
     // ---------- UI helpers ----------
     function showStep(id) {
-      ["step1", "step2a", "step2b", "results"].forEach(step => {
+      ["step1", "step2a", "step2b", "emailGate", "results"].forEach(step => {
         document.getElementById(step).classList.add("hidden");
       });
       document.getElementById(id).classList.remove("hidden");
