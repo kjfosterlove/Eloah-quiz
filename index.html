@@ -442,18 +442,49 @@
       }
     }
 
-    function submitEmailGate() {
-      const email = document.getElementById("emailInput").value.trim();
+    async function submitEmailGate() {
+  const email = document.getElementById("emailInput").value.trim();
 
-      if (!email || !email.includes("@")) {
-        alert("Please enter your email to see your results.");
-        return;
-      }
+  if (!email || !email.includes("@")) {
+    alert("Please enter your email to see your results.");
+    return;
+  }
 
-      console.log("Quiz email:", email);
+  const rankedMe = rankedProducts(scoreNeeds(needsMe));
+  const rankedOther = rankedProducts(scoreNeeds(needsOther));
 
-      showResults();
-    }
+  const data = {
+    email: email,
+    shopFor: shopFor,
+
+    myNeeds: needsMe.map(n => NEED_LABELS[n]).join(", "),
+    myResult1: rankedMe[0]?.key || "",
+    myResult2: rankedMe[1]?.key || "",
+    myResult3: rankedMe[2]?.key || "",
+
+    theirNeeds: needsOther.map(n => NEED_LABELS[n]).join(", "),
+    theirResult1: rankedOther[0]?.key || "",
+    theirResult2: rankedOther[1]?.key || "",
+    theirResult3: rankedOther[2]?.key || "",
+
+    season: SEASON_MODE
+  };
+
+  try {
+    await fetch(https://script.google.com/macros/s/AKfycbwmeIKK4jR_9jzJSk0Wc0BxzvVJc3nwT_ctk5uQwouJsT87fViCA0kynSa5HqScnt4m2w/exec", {
+      method: "POST",
+      mode: "no-cors",
+      headers: {
+        "Content-Type": "text/plain"
+      },
+      body: JSON.stringify(data)
+    });
+  } catch (error) {
+    console.log("Google Sheet save failed:", error);
+  }
+
+  showResults();
+}
 
     function scoreNeeds(selectedNeeds) {
       const scores = {};
